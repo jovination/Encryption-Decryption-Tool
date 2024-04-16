@@ -5,30 +5,32 @@ using namespace std;
 
 int main()
 {
-   string filename;
-   char mode;
+    char mode;
+    string text;
     
-   cout << "Enter the filename: ";
-   getline(cin >> ws, filename);
-   
-   cout << "Encrypt (e) or Decrypt (d)? "; 
-   cin >> mode;
-   
-   if (mode == 'e' || mode == 'E') {
-         if (encryptFile(filename, true)) {
-              cout << "File encrypted successfully." << endl;
-         }
-          else {
-              cerr << "Error encrypting file." << endl;
-         }
+    cout << "Enter the text: ";
+    getline(cin >> ws, text);
+    
+    cout << "Encrypt (e) or Decrypt (d)? "; 
+    cin >> mode;
+    
+    if (mode == 'e' || mode == 'E') {
+        string encryptedText = text; // Placeholder for encryption
+        if (encryptString(encryptedText, true)) {
+            cout << "Encrypted text: " << encryptedText << endl;
+        } else {
+            cerr << "Error encrypting text." << endl;
+        }
     } else if (mode == 'd' || mode == 'D') {
-         if (encryptFile(filename, false)) {
-              cout << "File decrypted successfully." << endl;
-         } else {
-              cerr << "Error decrypting file." << endl;
-         }
+        string decryptedText = text; // Placeholder for decryption
+        if (encryptString(decryptedText, false)) {
+            cout << "Decrypted text: " << decryptedText << endl;
+        } else {
+            cerr << "Error decrypting text." << endl;
+        }
     } else {
-         cerr << "Error: Invalid mode. Use 'e' for encryption or  'd' for decryption." << endl;
-   }
+        cerr << "Error: Invalid mode. Use 'e' for encryption or 'd' for decryption." << endl;
+    }
+    
     return 0;
-}     
+}

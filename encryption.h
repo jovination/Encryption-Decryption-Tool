@@ -5,6 +5,6 @@
 
 using namespace std;
 
-bool encryptFile(const string& filename, bool encrypt);
+bool encryptString(string& text, bool encrypt);
 
 #endif // ENCRYPTION_H
