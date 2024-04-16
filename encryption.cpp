@@ -5,7 +5,28 @@
  using namespace std;
 
 bool performCaesarCipher(string& content, bool encrypt){
-     
+   int shift = encrypt ? 3   : -3 ;
+
+   for (char& ch: content) {
+    if(isalpha(ch)){
+       char base = isupper(ch) ? 'A' : 'a';  
+       ch = stastic_cast<char>((ch - base + shift + 26) % 26 + base) ;  
+       
+    /*  
+        ch += shift;
+        if(ch > 'z'){
+            ch -= 26;
+        }
+        else if(ch < 'a'){
+            ch += 26;
+        }
+  */
+    }
+    
+  }
+
+  return true;
+
 }
 
  bool encryptFile(const string& filename, bool encrypt)
