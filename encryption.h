@@ -1,10 +1,10 @@
-#ifndef ENCRYTION_H
-#define ENCRYTION_H
+#ifndef ENCRYPTION_H
+#define ENCRYPTION_H
 
 #include <string>
 
 using namespace std;
 
-bool  encryptFile (const string& filename, bool encrypt);
+bool encryptFile(const string& filename, bool encrypt);
 
-#endif  // ENCRYTION_H
+#endif // ENCRYPTION_H
