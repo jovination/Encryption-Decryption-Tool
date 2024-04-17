@@ -92,6 +92,7 @@ bool encryptFile(const string& filename, bool encrypt) {
     string content((istreambuf_iterator<char>(inFile)), {});
     inFile.close();
 
+
     unsigned char iv[MAX_IV_LEN];
     generateRandomIV(iv);
 
@@ -109,16 +110,22 @@ bool encryptFile(const string& filename, bool encrypt) {
         outFile.close();
     }
     
-     else {
-        unsigned char storedIV[MAX_IV_LEN];
-        inFile.read(reinterpret_cast<char*>(storedIV), MAX_IV_LEN);
+   else {
+        ifstream inFileEncrypted("encrypted_" + filename, ios::binary); // Open the encrypted file
+        if (!inFileEncrypted) {
+            cout << "Cannot open encrypted file." << endl;
+            return false;
+        }
 
-        inFile.seekg(0, ios::end);
-        int ciphertext_size = inFile.tellg() - static_cast<std::streamoff>(MAX_IV_LEN);
-        inFile.seekg(MAX_IV_LEN, ios::beg);
+        unsigned char storedIV[MAX_IV_LEN];
+        inFileEncrypted.read(reinterpret_cast<char*>(storedIV), MAX_IV_LEN);
+
+        inFileEncrypted.seekg(0, ios::end);
+        int ciphertext_size = inFileEncrypted.tellg() - static_cast<std::streamoff>(MAX_IV_LEN);
+        inFileEncrypted.seekg(MAX_IV_LEN, ios::beg);
 
         unsigned char ciphertext[ciphertext_size];
-        inFile.read(reinterpret_cast<char*>(ciphertext), ciphertext_size);
+        inFileEncrypted.read(reinterpret_cast<char*>(ciphertext), ciphertext_size);
 
         unsigned char decryptedtext[ciphertext_size + AES_BLOCK_SIZE];
         aes_decrypt(ciphertext, decryptedtext, ciphertext_size, storedIV);
