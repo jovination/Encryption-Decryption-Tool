@@ -1,3 +1,4 @@
+// encryption.cpp
 #include "encryption.h"
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -5,124 +6,129 @@
 #include <fstream>
 #include <iostream>
 
-const int AES_BLOCK_SIZE = 16; // AES block size in bytes
-const int MAX_IV_LEN = 16; // Maximum length of IV for AES
+using namespace std;
 
-// Function to generate a random Initialization Vector (IV)
+const int AES_BLOCK_SIZE = 16;
+const int MAX_IV_LEN = 16;
+unsigned char key[] = "0123456789abcdef";
+
 void generateRandomIV(unsigned char *iv) {
     RAND_bytes(iv, MAX_IV_LEN);
 }
-// Handle errors
-void handleErrors(void)
-{
+
+void handleErrors() {
     ERR_print_errors_fp(stderr);
-    abort();
 }
 
+void aes_encrypt(const string& plaintext, unsigned char* ciphertext, unsigned char* iv) {
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        handleErrors();
+        return;
+    }
 
-// AES key for encryption function
-void aes_encrypt(const std::string& plaintext, unsigned char* ciphertext, unsigned char* iv) {
-    EVP_CIPHER_CTX *ctx;
+    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), nullptr, key, iv)) {
+        handleErrors();
+        EVP_CIPHER_CTX_free(ctx);
+        return;
+    }
+
     int len;
-    int ciphertext_len;
-
-    if(!(ctx = EVP_CIPHER_CTX_new())) {
+    if (1 != EVP_EncryptUpdate(ctx, ciphertext, &len, reinterpret_cast<const unsigned char*>(plaintext.data()), plaintext.size())) {
         handleErrors();
+        EVP_CIPHER_CTX_free(ctx);
+        return;
     }
+    int ciphertext_len = len;
 
-    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, key, iv)) {
+    if (1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
         handleErrors();
-    }
-
-    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, reinterpret_cast<const unsigned char*>(plaintext.c_str()), plaintext.size())) {
-        handleErrors();
-    }
-    ciphertext_len = len;
-
-    if(1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
-        handleErrors();
+        EVP_CIPHER_CTX_free(ctx);
+        return;
     }
     ciphertext_len += len;
 
     EVP_CIPHER_CTX_free(ctx);
 }
 
-// AES key for decryption function
 void aes_decrypt(const unsigned char* ciphertext, unsigned char* decryptedtext, int ciphertext_len, unsigned char* iv) {
-    EVP_CIPHER_CTX *ctx;
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        handleErrors();
+        return;
+    }
+
+    if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_128_cbc(), nullptr, key, iv)) {
+        handleErrors();
+        EVP_CIPHER_CTX_free(ctx);
+        return;
+    }
+
     int len;
-    int plaintext_len;
-
-    if(!(ctx = EVP_CIPHER_CTX_new())) {
+    if (1 != EVP_DecryptUpdate(ctx, decryptedtext, &len, ciphertext, ciphertext_len)) {
         handleErrors();
+        EVP_CIPHER_CTX_free(ctx);
+        return;
     }
+    int plaintext_len = len;
 
-    if(1 != EVP_DecryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, key, iv)) {
+    if (1 != EVP_DecryptFinal_ex(ctx, decryptedtext + len, &len)) {
         handleErrors();
-    }
-
-    if(1 != EVP_DecryptUpdate(ctx, decryptedtext, &len, ciphertext, ciphertext_len)) {
-        handleErrors();
-    }
-    plaintext_len = len;
-
-    if(1 != EVP_DecryptFinal_ex(ctx, decryptedtext + len, &len)) {
-        handleErrors();
+        EVP_CIPHER_CTX_free(ctx);
+        return;
     }
     plaintext_len += len;
 
     EVP_CIPHER_CTX_free(ctx);
 }
 
-// Function to encrypt or decrypt a file using AES
-bool encryptFile(const std::string& filename, bool encrypt) {
-    // Open the input file
-    std::ifstream inFile(filename, std::ios::binary);
+bool encryptFile(const string& filename, bool encrypt) {
+    ifstream inFile(filename, ios::binary);
     if (!inFile) {
-        std::cout << "Cannot open file: " << filename << std::endl;
+        cout << "Cannot open file: " << filename << endl;
         return false;
     }
 
-    // Read the contents of the file
-    std::string content((std::istreambuf_iterator<char>(inFile)), {});
+    string content((istreambuf_iterator<char>(inFile)), {});
     inFile.close();
 
-    // Generate a random IV
     unsigned char iv[MAX_IV_LEN];
     generateRandomIV(iv);
 
-    // Perform AES encryption or decryption
     if (encrypt) {
-        // Encrypt the content
-        unsigned char ciphertext[content.size() + AES_BLOCK_SIZE]; // Add space for padding
+        unsigned char ciphertext[content.size() + AES_BLOCK_SIZE];
         aes_encrypt(content, ciphertext, iv);
 
-        // Write the IV and encrypted content to a new file
-        std::ofstream outFile("encrypted_" + filename, std::ios::binary);
+        ofstream outFile("encrypted_" + filename, ios::binary);
         if (!outFile) {
-            std::cout << "Cannot create output file." << std::endl;
+            cout << "Cannot create output file." << endl;
             return false;
         }
         outFile.write(reinterpret_cast<const char*>(iv), MAX_IV_LEN);
-        outFile.write(reinterpret_cast<const char*>(ciphertext), content.size());
+        outFile.write(reinterpret_cast<const char*>(ciphertext), content.size() + AES_BLOCK_SIZE);
         outFile.close();
-    } 
-    else {
-        // Extract IV from the file
+    }
+    
+     else {
         unsigned char storedIV[MAX_IV_LEN];
         inFile.read(reinterpret_cast<char*>(storedIV), MAX_IV_LEN);
 
-        // Decrypt the content
-        unsigned char decryptedtext[content.size()]; // Should be large enough
-        aes_decrypt(reinterpret_cast<const unsigned char*>(content.c_str()), decryptedtext, content.size(), storedIV);
+        inFile.seekg(0, ios::end);
+        int ciphertext_size = inFile.tellg() - static_cast<std::streamoff>(MAX_IV_LEN);
+        inFile.seekg(MAX_IV_LEN, ios::beg);
 
-        // Write the decrypted content to a new file
-        std::ofstream outFile("decrypted_" + filename, std::ios::binary);
+        unsigned char ciphertext[ciphertext_size];
+        inFile.read(reinterpret_cast<char*>(ciphertext), ciphertext_size);
+
+        unsigned char decryptedtext[ciphertext_size + AES_BLOCK_SIZE];
+        aes_decrypt(ciphertext, decryptedtext, ciphertext_size, storedIV);
+
+        ofstream outFile("decrypted_" + filename, ios::binary);
         if (!outFile) {
-            std::cout << "Cannot create output file." << std::endl;
+            cout << "Cannot create output file." << endl;
             return false;
         }
-        outFile.write(reinterpret_cast<const char*>(decryptedtext), content.size());
+        outFile.write(reinterpret_cast<const char*>(decryptedtext), ciphertext_size + AES_BLOCK_SIZE);
         outFile.close();
     }
 
