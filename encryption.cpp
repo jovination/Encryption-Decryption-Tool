@@ -1,4 +1,3 @@
-// encryption.cpp
 #include "encryption.h"
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -20,7 +19,7 @@ void handleErrors() {
     ERR_print_errors_fp(stderr);
 }
 
-void aes_encrypt(const string& plaintext, unsigned char* ciphertext, unsigned char* iv) {
+void aes_encrypt(const string& plaintext, unsigned char* ciphertext, unsigned char* iv, unsigned char* key){
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         handleErrors();
@@ -51,7 +50,7 @@ void aes_encrypt(const string& plaintext, unsigned char* ciphertext, unsigned ch
     EVP_CIPHER_CTX_free(ctx);
 }
 
-void aes_decrypt(const unsigned char* ciphertext, unsigned char* decryptedtext, int ciphertext_len, unsigned char* iv) {
+void aes_decrypt(const unsigned char* ciphertext, unsigned char* decryptedtext, int ciphertext_len, unsigned char* iv, unsigned char* key) {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         handleErrors();
@@ -82,61 +81,64 @@ void aes_decrypt(const unsigned char* ciphertext, unsigned char* decryptedtext, 
     EVP_CIPHER_CTX_free(ctx);
 }
 
-bool encryptFile(const string& filename, bool encrypt) {
-    ifstream inFile(filename, ios::binary);
+bool encryptFile(const std::string& filename, bool encrypt, unsigned char* key) {
+    std::ifstream inFile(filename, std::ios::binary);
     if (!inFile) {
-        cout << "Cannot open file: " << filename << endl;
+        std::cout << "Cannot open file: " << filename << std::endl;
         return false;
     }
 
-    string content((istreambuf_iterator<char>(inFile)), {});
+    std::string content((std::istreambuf_iterator<char>(inFile)), {});
     inFile.close();
-
 
     unsigned char iv[MAX_IV_LEN];
     generateRandomIV(iv);
 
     if (encrypt) {
         unsigned char ciphertext[content.size() + AES_BLOCK_SIZE];
-        aes_encrypt(content, ciphertext, iv);
+        aes_encrypt(content, ciphertext, iv, key);
 
-        ofstream outFile("encrypted_" + filename, ios::binary);
+        std::ofstream outFile("encrypted_" + filename, std::ios::binary);
         if (!outFile) {
-            cout << "Cannot create output file." << endl;
+            std::cout << "Cannot create output file." << std::endl;
             return false;
         }
         outFile.write(reinterpret_cast<const char*>(iv), MAX_IV_LEN);
         outFile.write(reinterpret_cast<const char*>(ciphertext), content.size() + AES_BLOCK_SIZE);
         outFile.close();
-    }
-    
-   else {
-        ifstream inFileEncrypted("encrypted_" + filename, ios::binary); // Open the encrypted file
+    } else {
+        std::ifstream inFileEncrypted("encrypted_" + filename, std::ios::binary);
         if (!inFileEncrypted) {
-            cout << "Cannot open encrypted file." << endl;
+            std::cout << "Cannot open encrypted file." << std::endl;
             return false;
         }
 
         unsigned char storedIV[MAX_IV_LEN];
         inFileEncrypted.read(reinterpret_cast<char*>(storedIV), MAX_IV_LEN);
 
-        inFileEncrypted.seekg(0, ios::end);
-        int ciphertext_size = inFileEncrypted.tellg() - static_cast<std::streamoff>(MAX_IV_LEN);
-        inFileEncrypted.seekg(MAX_IV_LEN, ios::beg);
+        inFileEncrypted.seekg(0, std::ios::end);
+        int ciphertext_size = static_cast<int>(inFileEncrypted.tellg()) - MAX_IV_LEN;
+        inFileEncrypted.seekg(MAX_IV_LEN, std::ios::beg);
 
-        unsigned char ciphertext[ciphertext_size];
+        unsigned char* ciphertext = new unsigned char[ciphertext_size];
         inFileEncrypted.read(reinterpret_cast<char*>(ciphertext), ciphertext_size);
+        inFileEncrypted.close();
 
-        unsigned char decryptedtext[ciphertext_size + AES_BLOCK_SIZE];
-        aes_decrypt(ciphertext, decryptedtext, ciphertext_size, storedIV);
+        unsigned char* decryptedtext = new unsigned char[ciphertext_size + AES_BLOCK_SIZE];
+        aes_decrypt(ciphertext, decryptedtext, ciphertext_size, storedIV, key);
 
-        ofstream outFile("decrypted_" + filename, ios::binary);
+        std::ofstream outFile("decrypted_" + filename, std::ios::binary);
         if (!outFile) {
-            cout << "Cannot create output file." << endl;
+            std::cout << "Cannot create output file." << std::endl;
+            delete[] ciphertext;
+            delete[] decryptedtext;
             return false;
         }
-        outFile.write(reinterpret_cast<const char*>(decryptedtext), ciphertext_size + AES_BLOCK_SIZE);
+        outFile.write(reinterpret_cast<const char*>(decryptedtext), ciphertext_size);
         outFile.close();
+
+        delete[] ciphertext;
+        delete[] decryptedtext;
     }
 
     return true;

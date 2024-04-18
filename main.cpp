@@ -14,13 +14,13 @@ int main() {
     cin >> mode;
 
     if (mode == 'e' || mode == 'E') {
-        if (encryptFile(filename, true)) {
+        if (encryptFile(filename, true, key)) {
             cout << "File encrypted successfully." << endl;
         } else {
             cerr << "Error encrypting file." << endl;
         }
     } else if (mode == 'd' || mode == 'D') {
-        if (encryptFile(filename, false)) {
+        if (encryptFile(filename, false, key)) {
             cout << "File decrypted successfully." << endl;
         } else {
             cerr << "Error decrypting file." << endl;
