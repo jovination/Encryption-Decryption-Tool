@@ -106,7 +106,9 @@ bool encryptFile(const std::string& filename, bool encrypt, unsigned char* key) 
         outFile.write(reinterpret_cast<const char*>(iv), MAX_IV_LEN);
         outFile.write(reinterpret_cast<const char*>(ciphertext), content.size() + AES_BLOCK_SIZE);
         outFile.close();
-    } else {
+    } 
+    
+    else {
         std::ifstream inFileEncrypted("encrypted_" + filename, std::ios::binary);
         if (!inFileEncrypted) {
             std::cout << "Cannot open encrypted file." << std::endl;
@@ -140,6 +142,43 @@ bool encryptFile(const std::string& filename, bool encrypt, unsigned char* key) 
         delete[] ciphertext;
         delete[] decryptedtext;
     }
+
+    return true;
+}
+
+bool decryptFile(const std::string& filename, unsigned char* key) {
+    std::ifstream inFileEncrypted("encrypted_" + filename, std::ios::binary);
+    if (!inFileEncrypted) {
+        std::cout << "Cannot open encrypted file." << std::endl;
+        return false;
+    }
+
+    unsigned char storedIV[MAX_IV_LEN];
+    inFileEncrypted.read(reinterpret_cast<char*>(storedIV), MAX_IV_LEN);
+
+    inFileEncrypted.seekg(0, std::ios::end);
+    int ciphertext_size = static_cast<int>(inFileEncrypted.tellg()) - MAX_IV_LEN;
+    inFileEncrypted.seekg(MAX_IV_LEN, std::ios::beg);
+
+    unsigned char* ciphertext = new unsigned char[ciphertext_size];
+    inFileEncrypted.read(reinterpret_cast<char*>(ciphertext), ciphertext_size);
+    inFileEncrypted.close();
+
+    unsigned char* decryptedtext = new unsigned char[ciphertext_size + AES_BLOCK_SIZE];
+    aes_decrypt(ciphertext, decryptedtext, ciphertext_size, storedIV, key);
+
+    std::ofstream outFile("decrypted_" + filename, std::ios::binary);
+    if (!outFile) {
+        std::cout << "Cannot create output file." << std::endl;
+        delete[] ciphertext;
+        delete[] decryptedtext;
+        return false;
+    }
+    outFile.write(reinterpret_cast<const char*>(decryptedtext), ciphertext_size);
+    outFile.close();
+
+    delete[] ciphertext;
+    delete[] decryptedtext;
 
     return true;
 }

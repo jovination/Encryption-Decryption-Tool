@@ -20,7 +20,7 @@ int main() {
             cerr << "Error encrypting file." << endl;
         }
     } else if (mode == 'd' || mode == 'D') {
-        if (encryptFile(filename, false, key)) {
+        if (decryptFile(filename, key)) { // Call decryptFile instead of encryptFile
             cout << "File decrypted successfully." << endl;
         } else {
             cerr << "Error decrypting file." << endl;
